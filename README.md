@@ -78,6 +78,34 @@ https://setup.nard.uk/d?n=PROV_LAMP_4B98&p=k3m9qrst
 Every ClipSetup device advertises Bluetooth service `4617760E-5308-4EFE-B137-04E8FA0A5B61`, which is
 how the accessory sheet finds it.
 
+## The setup.nard.uk site
+
+`web/` is the Cloudflare Worker behind `https://setup.nard.uk`. iOS fetches
+`/.well-known/apple-app-site-association` from that host to learn that `/d*` links open the App Clip
+(`FVSY7CFC3S.com.narduk.devices.Clip`) and the app. The Worker also serves a short landing page (`/`, `/d`)
+and a privacy policy (`/privacy`); everything else is a 404. It has no dependencies, stores nothing and
+never echoes the link's query string, so the PIN in `p` is not logged or reflected.
+
+Deploy it (Cloudflare account that holds the `nard.uk` zone; `web/wrangler.toml` names it):
+
+```sh
+cd web
+wrangler deploy
+```
+
+`wrangler.toml` declares `setup.nard.uk` as a Workers custom domain, which makes Cloudflare create the DNS
+record and certificate. A token with only `Workers Scripts Write` uploads the script, but wrangler then
+stops on a zone routes read it is not allowed. Attach the domain with the Workers domains API instead
+(`PUT /accounts/<account_id>/workers/domains` with `hostname`, `service` = `clipsetup-web`,
+`environment` = `production` and the `nard.uk` `zone_id`), once; later deploys only need the upload.
+
+Check it:
+
+```sh
+curl -sS -D- https://setup.nard.uk/.well-known/apple-app-site-association   # 200, application/json
+curl -sS -o /dev/null -w '%{http_code}\n' https://setup.nard.uk/privacy     # 200
+```
+
 ## Security
 
 - The Wi-Fi password travels only over an encrypted Bluetooth session between the phone and the device

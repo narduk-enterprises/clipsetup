@@ -1,0 +1,12 @@
+# setup.nard.uk -- the Associated Domains host for the ClipSetup App Clip, plus a tiny human page.
+# See README.md in this directory. Deploy: `wrangler deploy` (the custom domain below creates the DNS record).
+name = "clipsetup-web"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+# Narduk Enterprises production Cloudflare account, which holds the nard.uk zone.
+account_id = "73a85923e2b7cf8f29d0b8c89de9d265"
+workers_dev = false
+
+[[routes]]
+pattern = "setup.nard.uk"
+custom_domain = true
