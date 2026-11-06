@@ -1,0 +1,47 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  firmware:
+    name: Firmware library
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: firmware
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install platformio
+      - name: Host tests (name, PIN, link)
+        run: pio test -e native
+      - name: Build the C3 starter
+        run: pio run -e c3-starter
+  ios:
+    name: iOS app and App Clip
+    runs-on: macos-26
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - name: Build both targets, unsigned
+        run: >
+          xcodebuild -project NardukDevices.xcodeproj -scheme NardukDevices -configuration Debug
+          -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+      - name: Hostless tests
+        run: |
+          SIM=$(xcrun simctl list devices available | grep -m1 -oE 'iPhone[^(]*\(([0-9A-F-]{36})\)' | grep -oE '[0-9A-F-]{36}')
+          xcodebuild -project NardukDevices.xcodeproj -scheme NardukDevices -destination "platform=iOS Simulator,id=$SIM" CODE_SIGNING_ALLOWED=NO test

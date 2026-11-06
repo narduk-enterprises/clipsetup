@@ -1,0 +1,10 @@
+{
+  "name": "ClipSetup",
+  "version": "0.1.0",
+  "description": "Put an ESP32 on Wi-Fi from an iPhone App Clip: show a QR, scan it with the Camera, pick the network. No app to install, nothing to type on the device.",
+  "keywords": "wifi, provisioning, ble, esp32, iphone, app clip, qr",
+  "repository": { "type": "git", "url": "https://github.com/narduk-enterprises/clipsetup.git" },
+  "license": "MIT",
+  "authors": [{ "name": "Narduk Enterprises", "url": "https://github.com/narduk-enterprises" }],
+  "headers": "clip_setup.h"
+}

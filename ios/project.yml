@@ -1,0 +1,109 @@
+name: NardukDevices
+options:
+  bundleIdPrefix: com.narduk
+  deploymentTarget:
+    iOS: "26.0"                               # the apple-vm CI SDK (Xcode 26.6) caps this
+packages:
+  ESPProvision:
+    url: https://github.com/espressif/esp-idf-provisioning-ios
+    revision: 78e58f010f8539f800bce063a26d3e4c4ac596b9   # master 2026-09-16; security 1 BLE provisioning
+# Bundle IDs and team below are Narduk Enterprises'; use your own to build and sign.
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    DEVELOPMENT_TEAM: FVSY7CFC3S
+    CODE_SIGN_STYLE: Automatic
+    TARGETED_DEVICE_FAMILY: "1"
+    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "0.1"
+targets:
+  NardukDevices:
+    type: application
+    platform: iOS
+    sources:
+      - Sources/Model
+      - Sources/Shared
+      - Sources/App
+    dependencies:
+      - package: ESPProvision
+      - target: NardukDevicesClip               # embedded under AppClips/
+    info:
+      path: Sources/App/Info.plist
+      properties:
+        CFBundleDisplayName: Narduk Devices
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIRequiresFullScreen: true
+        NSBluetoothAlwaysUsageDescription: Narduk Devices uses Bluetooth to send your Wi-Fi to a device you're setting up.
+        NSAccessorySetupKitSupports: [Bluetooth]
+        NSAccessorySetupBluetoothServices: ["4617760E-5308-4EFE-B137-04E8FA0A5B61"]   # uppercase: AccessorySetupKit compares it to CBUUID.uuidString. ClipSetup's service (firmware clip_setup.h)
+        NSAccessorySetupBluetoothNames: ["PROV_"]
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.narduk.devices
+        GENERATE_INFOPLIST_FILE: NO
+  NardukDevicesClip:
+    type: application.on-demand-install-capable
+    platform: iOS
+    sources:
+      - Sources/Model
+      - Sources/Shared
+      - Sources/Clip
+    dependencies:
+      - package: ESPProvision
+    info:
+      path: Sources/Clip/Info.plist
+      properties:
+        CFBundleDisplayName: Device Setup
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIRequiresFullScreen: true
+        NSBluetoothAlwaysUsageDescription: Device Setup uses Bluetooth to send your Wi-Fi to the device you scanned.
+        NSAccessorySetupKitSupports: [Bluetooth]
+        NSAccessorySetupBluetoothServices: ["4617760E-5308-4EFE-B137-04E8FA0A5B61"]   # uppercase: AccessorySetupKit compares it to CBUUID.uuidString. ClipSetup's service (firmware clip_setup.h)
+        NSAccessorySetupBluetoothNames: ["PROV_"]
+        ITSAppUsesNonExemptEncryption: false
+        NSAppClip:
+          NSAppClipRequestEphemeralUserNotification: false
+          NSAppClipRequestLocationConfirmation: false
+    entitlements:
+      path: Sources/Clip/Clip.entitlements
+      properties:
+        com.apple.developer.parent-application-identifiers: [$(AppIdentifierPrefix)com.narduk.devices]
+        com.apple.developer.on-demand-install-capable: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.narduk.devices.Clip
+        GENERATE_INFOPLIST_FILE: NO
+  NardukDevicesTests:
+    type: bundle.unit-test
+    platform: iOS
+    # Hostless: compiles the pure model code directly; no app launch.
+    sources:
+      - Tests
+      - Sources/Model
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  NardukDevices:
+    build:
+      targets:
+        NardukDevices: all
+        NardukDevicesTests: [test]
+    test:
+      targets: [NardukDevicesTests]
+  NardukDevicesClip:
+    build:
+      targets:
+        NardukDevicesClip: all
+    run:
+      environmentVariables:
+        _XCAppClipURL: https://setup.nard.uk/d?n=PROV_DIAL_4B98&p=test
