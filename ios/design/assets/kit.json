@@ -1,0 +1,19 @@
+{
+  "name": "ClipSetup",
+  "required": [
+    "app-icon"
+  ],
+  "assets": [
+    {
+      "name": "app-icon",
+      "kind": "app-icon",
+      "backend": "grok",
+      "tool": "image_gen",
+      "prompt": "A flat, full-bleed square app icon. Indigo (#3D3BD6) fills the whole square to every edge, square corners. Centered on it, one bold simple symbol, large, reading clearly at 16 px. Only these colours: indigo #3D3BD6, white. No words, no border, no frame, no rounded corners, no gradient, no shadow, no glow, no 3D, no texture. Symbol:\n one bold white paperclip drawn as a single thick continuous line whose upper loops bend into three concentric arcs like a Wi-Fi signal.",
+      "round": 1
+    }
+  ],
+  "platforms": [
+    "ios"
+  ]
+}

@@ -1,0 +1,2 @@
+A flat, full-bleed square app icon. Warm amber (#FFB000) fills the whole square to every edge, square corners. Centered on it, one bold simple symbol, large, reading clearly at 16 px. Only these colours: warm amber #FFB000, near black #1B1B1B. No words, no border, no frame, no rounded corners, no gradient, no shadow, no glow, no 3D, no texture. Symbol:
+ three thick near-black square QR code corner markers in the top-left, top-right and bottom-left, and in the bottom-right a solid near-black dot with two concentric quarter arcs radiating from it.
