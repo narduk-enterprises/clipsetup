@@ -1,0 +1,2 @@
+A flat, full-bleed square app icon. Midnight navy (#14213D) fills the whole square to every edge, square corners. Centered on it, one bold simple symbol, large, reading clearly at 16 px. Only these colours: midnight navy #14213D, white, warm yellow #FFC93C. No words, no border, no frame, no rounded corners, no gradient, no shadow, no glow, no 3D, no texture. Symbol:
+ a small solid white square chip at the bottom centre with three short legs on each side, and three bold warm yellow concentric arcs rising above it like a Wi-Fi signal.

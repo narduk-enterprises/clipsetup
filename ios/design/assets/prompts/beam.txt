@@ -1,0 +1,2 @@
+A flat, full-bleed square app icon. Mint (#3DDC97) fills the whole square to every edge, square corners. Centered on it, one bold simple symbol, large, reading clearly at 16 px. Only these colours: mint #3DDC97, white, deep green #0B3D2E. No words, no border, no frame, no rounded corners, no gradient, no shadow, no glow, no 3D, no texture. Symbol:
+ a deep green solid square chip on the lower left and a white tall rounded-rectangle phone shape on the upper right, joined by one thick dashed white diagonal line.

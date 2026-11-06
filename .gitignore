@@ -3,3 +3,4 @@ build/
 build-*/
 .pio/
 .DS_Store
+design/assets/.lane/

@@ -1,0 +1,21 @@
+{
+  "name": "ClipSetup",
+  "short_name": "ClipSetup",
+  "theme_color": "#2E18C2",
+  "background_color": "#2E18C2",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

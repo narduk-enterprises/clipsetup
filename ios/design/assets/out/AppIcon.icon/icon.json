@@ -1,0 +1,18 @@
+{
+  "fill": {
+    "solid": "srgb:0.18039,0.09412,0.76078,1.00000"
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "app-icon.png",
+          "name": "app-icon"
+        }
+      ]
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  }
+}
