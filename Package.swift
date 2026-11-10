@@ -7,7 +7,7 @@ import PackageDescription
 let package = Package(
     name: "ClipSetupKit",
     platforms: [
-        .iOS("26.0"),   // the Narduk Devices app's target; AccessorySetupKit needs 18
+        .iOS(.v17),     // My Boat's floor; `DeviceSetup` itself needs iOS 18 (AccessorySetupKit) and says so
         .macOS(.v14),   // only so `swift test` runs the platform-free parts on a Mac
     ],
     products: [

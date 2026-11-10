@@ -127,6 +127,8 @@ public struct SetupFlow: Sendable {
             state = .connecting
             return .connect
         case .connected:
+            // Only once per session: a repeat must not send the custom steps again.
+            guard state == .connecting else { return nil }
             return nextAfterConnect()
         case .disconnected:
             // The device turns Bluetooth off once it has joined; only a drop mid-setup is a failure.
@@ -157,6 +159,7 @@ public struct SetupFlow: Sendable {
             state = .scanning
             return .scan
         case .scanned(let found, let why):
+            guard state == .scanning else { return nil }
             // Strongest first, one row per name (mesh networks repeat).
             var seen = Set<String>()
             networks = found.filter { !$0.ssid.isEmpty }.sorted { $0.rssi > $1.rssi }.filter { seen.insert($0.ssid).inserted }
@@ -167,12 +170,15 @@ public struct SetupFlow: Sendable {
             state = .sending(ssid: ssid)
             return .provision(ssid: ssid, password: password)
         case .configApplied(let ssid):
+            guard case .sending = state else { return nil }
             state = .sending(ssid: ssid)
             return nil
         case .joined(let ssid):
+            guard case .sending = state else { return nil }
             state = .done(ssid: ssid)
             return nil
         case .joinFailed(let why):
+            guard case .sending = state else { return nil }
             state = .failed(why)
             return nil
         }

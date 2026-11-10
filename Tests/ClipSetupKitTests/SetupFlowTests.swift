@@ -109,6 +109,17 @@ struct SetupFlowTests {
         #expect(flow.stepsDone)
     }
 
+    @Test func lateOrRepeatedCallbacksDoNotAdvanceTheFlow() {
+        var flow = SetupFlow(displayName: "Mybo 4B98", steps: [.custom(path: "mybo-claim", data: Self.token)])
+        _ = flow.handle(.found)
+        #expect(flow.handle(.connected) == .send(path: "mybo-claim", data: Self.token))
+        #expect(flow.handle(.connected) == nil)                       // a repeat never resends the token
+        #expect(flow.handle(.scanned([SetupNetwork(ssid: "Old", rssi: -40, secured: true)], nil)) == nil)
+        #expect(flow.networks.isEmpty)
+        _ = flow.handle(.joined(ssid: "Old"))                         // a provision reply from an earlier try
+        #expect(flow.state == .custom(path: "mybo-claim"))
+    }
+
     @Test func tryingAgainRunsTheStepsAgainInTheNewSession() {
         var device = FakeDevice(steps: [.custom(path: "mybo-claim", data: Self.token)])
         device.connect()
@@ -136,12 +147,16 @@ struct SetupFlowTests {
         #expect(flow.state == .failed("Couldn't connect to Dial 4B98: timed out"))
         _ = flow.handle(.cancelled)
         #expect(flow.state == .failed("Setup was cancelled. Tap Try again when you're ready."))
+        _ = flow.handle(.found)
+        _ = flow.handle(.connected)
         _ = flow.handle(.scanned([], "busy"))
         #expect(flow.state == .failed("Dial 4B98 didn't see any Wi-Fi. busy"))
     }
 
     @Test func networksAreStrongestFirstOnePerNameAndNoBlanks() {
         var flow = SetupFlow(displayName: "Dial 4B98")
+        _ = flow.handle(.found)
+        _ = flow.handle(.connected)
         _ = flow.handle(.scanned([
             SetupNetwork(ssid: "Mesh", rssi: -80, secured: true),
             SetupNetwork(ssid: "", rssi: -40, secured: false),

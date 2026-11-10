@@ -31,6 +31,10 @@ public struct WifiPasswords: Sendable {
     public func forget(_ ssid: String) { SecItemDelete(base(ssid) as CFDictionary) }
 
     private func base(_ ssid: String) -> [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: ssid]
+        var query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: ssid]
+        #if os(macOS)
+        query[kSecUseDataProtectionKeychain as String] = true   // iOS always uses it; a Mac needs asking
+        #endif
+        return query
     }
 }
