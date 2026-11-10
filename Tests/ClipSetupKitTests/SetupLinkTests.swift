@@ -1,3 +1,4 @@
+import ClipSetupKit
 import Foundation
 import Testing
 

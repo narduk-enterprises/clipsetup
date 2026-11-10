@@ -1,5 +1,5 @@
+import ClipSetupKit
 import SwiftUI
-@preconcurrency import ESPProvision
 
 @main
 struct NardukDevicesApp: App {
@@ -12,10 +12,10 @@ struct NardukDevicesApp: App {
                     .navigationDestination(for: SetupLink.self) { SetupView(link: $0).id($0) }
             }
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
-                if let link = SetupLink(url: activity.webpageURL) { path = [link] }
+                if let link = SetupLinkResolver.clipSetup.resolve(activity.webpageURL) { path = [link] }
             }
             .onOpenURL { url in
-                if let link = SetupLink(url: url) { path = [link] }
+                if let link = SetupLinkResolver.clipSetup.resolve(url) { path = [link] }
             }
         }
     }
@@ -61,12 +61,7 @@ private struct NearbyView: View {
 
     private func search() async {
         searching = true
-        let found: [String] = await withCheckedContinuation { done in
-            ESPProvisionManager.shared.searchESPDevices(devicePrefix: "PROV_", transport: .ble, security: .secure) { @Sendable devices, _ in
-                done.resume(returning: (devices ?? []).map(\.name))
-            }
-        }
-        names = Array(Set(found)).sorted()
+        names = await nearbySetupDevices(prefix: "PROV_")
         searching = false
     }
 }

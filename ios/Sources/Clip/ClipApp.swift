@@ -1,3 +1,4 @@
+import ClipSetupKit
 import SwiftUI
 
 /// The App Clip: opened by a device's setup QR or NFC sticker (`https://setup.nard.uk/d?n=…&p=…`).
@@ -16,10 +17,10 @@ struct DeviceSetupClip: App {
                 }
             }
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
-                if let found = SetupLink(url: activity.webpageURL) { link = found }
+                if let found = SetupLinkResolver.clipSetup.resolve(activity.webpageURL) { link = found }
             }
             .onOpenURL { url in
-                if let found = SetupLink(url: url) { link = found }
+                if let found = SetupLinkResolver.clipSetup.resolve(url) { link = found }
             }
         }
     }

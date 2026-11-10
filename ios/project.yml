@@ -4,9 +4,8 @@ options:
   deploymentTarget:
     iOS: "26.0"                               # the apple-vm CI SDK (Xcode 26.6) caps this
 packages:
-  ESPProvision:
-    url: https://github.com/espressif/esp-idf-provisioning-ios
-    revision: 78e58f010f8539f800bce063a26d3e4c4ac596b9   # master 2026-09-16; security 1 BLE provisioning
+  ClipSetupKit:
+    path: ..                                   # the repo's own package; it pins ESPProvision 3.2.0 (= 78e58f01)
 # Bundle IDs and team below are Narduk Enterprises'; use your own to build and sign.
 settings:
   base:
@@ -23,11 +22,10 @@ targets:
     type: application
     platform: iOS
     sources:
-      - Sources/Model
       - Sources/Shared
       - Sources/App
     dependencies:
-      - package: ESPProvision
+      - package: ClipSetupKit
       - target: NardukDevicesClip               # embedded under AppClips/
     info:
       path: Sources/App/Info.plist
@@ -51,11 +49,10 @@ targets:
     type: application.on-demand-install-capable
     platform: iOS
     sources:
-      - Sources/Model
       - Sources/Shared
       - Sources/Clip
     dependencies:
-      - package: ESPProvision
+      - package: ClipSetupKit
     info:
       path: Sources/Clip/Info.plist
       properties:
@@ -85,10 +82,11 @@ targets:
   NardukDevicesTests:
     type: bundle.unit-test
     platform: iOS
-    # Hostless: compiles the pure model code directly; no app launch.
+    # Hostless: the package's own tests (link, resolver, step order) against the package; no app launch.
     sources:
-      - Tests
-      - Sources/Model
+      - path: ../Tests/ClipSetupKitTests
+    dependencies:
+      - package: ClipSetupKit
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

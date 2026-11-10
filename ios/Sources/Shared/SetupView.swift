@@ -1,3 +1,4 @@
+import ClipSetupKit
 import SwiftUI
 
 /// The whole setup flow for one device: find it, pick a network, send the password, done.
@@ -15,7 +16,7 @@ struct SetupView: View {
             .onDisappear { setup.cancel() }
             .sheet(item: $chosen) { network in
                 PasswordSheet(network: network, device: setup.link.displayName) { password, remember in
-                    if remember { WifiPasswords.save(password, for: network.ssid) } else { WifiPasswords.forget(network.ssid) }
+                    if remember { WifiPasswords.nardukDevices.save(password, for: network.ssid) } else { WifiPasswords.nardukDevices.forget(network.ssid) }
                     chosen = nil
                     setup.join(ssid: network.ssid, password: password)
                 }
@@ -29,6 +30,8 @@ struct SetupView: View {
                     detail: "Keep your phone near it.", note: setup.sheetNote)
         case .connecting:
             Working(symbol: "lock.shield", title: "Connecting securely", detail: "Using the code you scanned.", note: setup.sheetNote)
+        case .custom:
+            Working(symbol: "lock.shield", title: "Sending setup details", detail: "Over the same secure link.", note: setup.sheetNote)
         case .scanning:
             Working(symbol: "wifi", title: "Asking what Wi-Fi it can see", detail: nil, note: setup.sheetNote)
         case .pickNetwork:
@@ -138,7 +141,7 @@ private struct PasswordSheet: View {
                     Button("Join", action: join).disabled(network.secured && password.isEmpty)
                 }
             }
-            .onAppear { password = WifiPasswords.load(network.ssid) ?? "" }
+            .onAppear { password = WifiPasswords.nardukDevices.load(network.ssid) ?? "" }
         }
         .presentationDetents([.medium])
     }

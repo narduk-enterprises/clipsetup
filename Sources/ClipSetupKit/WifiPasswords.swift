@@ -2,10 +2,16 @@ import Foundation
 import Security
 
 /// Wi-Fi passwords the user chose to remember, kept in this app's Keychain so the next device is one tap.
-enum WifiPasswords {
-    private static let service = "com.narduk.devices.wifi"
+public struct WifiPasswords: Sendable {
+    /// The Keychain service the passwords are stored under. Each app uses its own.
+    public let service: String
 
-    static func load(_ ssid: String) -> String? {
+    public init(service: String) { self.service = service }
+
+    /// The Narduk Devices app and its clip; the service they have always used, so remembered passwords carry over.
+    public static let nardukDevices = WifiPasswords(service: "com.narduk.devices.wifi")
+
+    public func load(_ ssid: String) -> String? {
         var query = base(ssid)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -14,7 +20,7 @@ enum WifiPasswords {
         return String(data: data, encoding: .utf8)
     }
 
-    static func save(_ password: String, for ssid: String) {
+    public func save(_ password: String, for ssid: String) {
         SecItemDelete(base(ssid) as CFDictionary)
         var item = base(ssid)
         item[kSecValueData as String] = Data(password.utf8)
@@ -22,9 +28,9 @@ enum WifiPasswords {
         SecItemAdd(item as CFDictionary, nil)
     }
 
-    static func forget(_ ssid: String) { SecItemDelete(base(ssid) as CFDictionary) }
+    public func forget(_ ssid: String) { SecItemDelete(base(ssid) as CFDictionary) }
 
-    private static func base(_ ssid: String) -> [String: Any] {
+    private func base(_ ssid: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: ssid]
     }
 }
