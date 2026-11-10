@@ -1,0 +1,117 @@
+{
+  "source": "ESP-IDF v5.3.1 tools/esp_prov client (testdata/esp_prov_client.py) against espprov.Server",
+  "pop": "k3m9qrst",
+  "ssid": "bench",
+  "passphrase": "correct horse",
+  "exchanges": [
+    {
+      "endpoint": "proto-ver",
+      "request": "455350",
+      "response": "7b2270726f76223a7b22636170223a5b22776966695f7363616e225d2c227365635f766572223a312c22766572223a2276312e31227d7d"
+    },
+    {
+      "endpoint": "prov-session",
+      "request": "10015a25a201220a2079a631eede1bf9c98f12032cdeadd0e7a079398fc786b88cc846ec89af85a51a",
+      "response": "10015a390801aa0134122067e4d0ac1caca288340d7ed9655dcd4c1ee4637d920004d3ffc98b959d12f40e1a104b78e2d89928c18c3b6064aa6e16d8d9"
+    },
+    {
+      "endpoint": "prov-session",
+      "request": "10015a270802b2012212209ae24747b81b861ac4fa3a35ce993f9a55da744bc771ab56db2ddfc8f845cbd7",
+      "response": "10015a270803ba01221a20604b34a583517c18dda2c3dca95542269f7955bb982cce8b11bd6231b6d3cb14"
+    },
+    {
+      "endpoint": "prov-scan",
+      "request": "ee99b4a4c7abe97b",
+      "response": "1307f911"
+    },
+    {
+      "endpoint": "prov-scan",
+      "request": "c37f",
+      "response": "5e618be731334bc1"
+    },
+    {
+      "endpoint": "prov-scan",
+      "request": "2e43b8f70b5c",
+      "response": "46f7cf78e4e50c800b7fdf69edb98a3254daa364801aa3f36d347228806f545500e26e30d9107fe3b611a8d366decf139fead70cb4b0dfbc844c2e4ac27aeb8491e651c6f6e4c37d9ba2b1ad3680e81d0628aa04c38ed81125747a6beaac0806bbe0e0be82e121c1a302c463530eadaf687974d50d290aa17c52c6e71a03444cea630fc77e87ce69e1eafb22d829ec"
+    },
+    {
+      "endpoint": "prov-scan",
+      "request": "937d0acecb95f0cb",
+      "response": "0b009165469b46d5a0274b6871787e276fabcf5a21a4861749a3a9c0b31f21c70691e63594eebe0651"
+    },
+    {
+      "endpoint": "custom-data",
+      "request": "b6a34edb5ee740ebcfbcba34b1af61caee47",
+      "response": "ba131b05532de291388d00675f009b"
+    },
+    {
+      "endpoint": "prov-config",
+      "request": "a0ed94f71b2a2e572ce0c4c6955272c7f6d888056207f04807a4",
+      "response": "f800f5bf"
+    },
+    {
+      "endpoint": "prov-config",
+      "request": "6418",
+      "response": "4ee8a98f"
+    },
+    {
+      "endpoint": "prov-config",
+      "request": "ce94",
+      "response": "6ba2e8dfc4032d99d8a2d7cea814024cbc0a356e3695d45e01409196e07212e31b958df3f3"
+    }
+  ],
+  "client_saw": {
+    "apply_config": 0,
+    "custom": "{\"received\":18}",
+    "get_status": "connected",
+    "proto_ver": {
+      "prov": {
+        "cap": [
+          "wifi_scan"
+        ],
+        "sec_ver": 1,
+        "ver": "v1.1"
+      }
+    },
+    "scan": [
+      {
+        "auth": "WPA2_PSK",
+        "bssid": "020000000001",
+        "channel": 6,
+        "rssi": -48,
+        "ssid": "bench"
+      },
+      {
+        "auth": "WPA2_WPA3_PSK",
+        "bssid": "020000000002",
+        "channel": 36,
+        "rssi": -61,
+        "ssid": "Caf\u00c3\u00a9 5G"
+      },
+      {
+        "auth": "Open",
+        "bssid": "020000000003",
+        "channel": 11,
+        "rssi": -77,
+        "ssid": "marina guest"
+      },
+      {
+        "auth": "WPA3_PSK",
+        "bssid": "020000000004",
+        "channel": 1,
+        "rssi": -80,
+        "ssid": "dock-ap"
+      },
+      {
+        "auth": "WPA_WPA2_PSK",
+        "bssid": "020000000005",
+        "channel": 149,
+        "rssi": -90,
+        "ssid": "neighbour"
+      }
+    ],
+    "session": "ok",
+    "set_config": 0
+  },
+  "device_notes": "device randomness: newDRBG(\"clipsetup golden device\"); client key bytes 0x40..0x5f"
+}

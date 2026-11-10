@@ -97,6 +97,30 @@ python3 -m venv /tmp/v && /tmp/v/bin/pip install bleak==1.1.1
 /tmp/v/bin/python linux/tools/scan.py 15 --gatt   # while the example runs on the board
 ```
 
+## K2: the Go peripheral on the board (17:43 and 17:48 CT)
+
+`clipsetup-example` and `clipsetup-busprobe` cross-compiled (`CGO_ENABLED=0 GOOS=linux
+GOARCH=arm64`), copied to `/tmp/k2`, run under `sudo timeout` with their PIDs recorded, then removed.
+
+- **On the air (btmon):** the same shape as the B0 proof: properties `0x0013` (legacy `ADV_IND`),
+  advertising data = the 128-bit UUID + flags `0x06`, scan response = `Name (complete):
+  PROV_MYBO_2118`.
+- **Fake Wi-Fi backend, through the exported D-Bus objects** (the probe calls
+  `GattCharacteristic1.WriteValue`/`ReadValue` as bluetoothd would, at MTU 23 so every request is
+  split across offset writes and every long response is read in pieces): five characteristics
+  `4617ff50`…`4617ff54`, all `[read write]`, each found by its `0x2901` name; `proto-ver` →
+  `{"prov":{"cap":["wifi_scan"],"sec_ver":1,"ver":"v1.1"}}`; security 1 established with the PIN;
+  scan 2 networks; `custom-data` → `{"received":17}`; provision → Connected, `192.0.2.10`;
+  15 WriteValue and 19 ReadValue calls. The example then stopped advertising and exited 0, as
+  ClipSetup does after a join.
+- **Wrong PoP:** refused at session command 1 (`proof of possession did not match`).
+- **Real wpa_supplicant backend, read-only** (cached `SCAN_RESULTS`, no `SCAN`, no join): session,
+  scan (1 cached network; names not recorded) and `custom-data` at MTU 185; SIGINT stopped it
+  cleanly and no client socket was left in `/tmp`.
+
+This proves the D-Bus plumbing and the protocol on the board. It is not a radio test: no central
+connected over the air, so long reads and writes through a real ATT link are still unproven.
+
 ## Risks noted
 
 - **Advertising interval 1280 ms** (BlueZ's default for an application advertisement). iPhones in
