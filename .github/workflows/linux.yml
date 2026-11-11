@@ -1,0 +1,36 @@
+name: Linux peripheral
+on:
+  pull_request:
+    paths:
+      - "linux/**"
+      - ".github/workflows/linux.yml"
+  push:
+    branches: [main]
+    paths:
+      - "linux/**"
+      - ".github/workflows/linux.yml"
+permissions:
+  contents: read
+concurrency:
+  group: linux-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  go:
+    name: Go module (linux/)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: linux
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: linux/go.mod
+          cache-dependency-path: linux/go.sum
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: go test -race ./...
+      - name: Cross-compile for the Orange Pi (linux/arm64)
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...
