@@ -83,6 +83,7 @@ type fakeSupplicant struct {
 	mu       sync.Mutex
 	got      []string
 	joinWith string // the event sent after SELECT_NETWORK
+	noIP     bool   // associate but never get an address
 	ip       string
 }
 
@@ -120,7 +121,9 @@ func (f *fakeSupplicant) serve() {
 		case cmd == "ADD_NETWORK":
 			reply("3\n")
 		case cmd == "STATUS":
-			if f.ip != "" {
+			if f.ip == "-" {
+				reply("wpa_state=COMPLETED\nssid=bench\nfreq=2437\nkey_mgmt=WPA2-PSK\n")
+			} else if f.ip != "" {
 				reply("wpa_state=COMPLETED\nssid=bench\nfreq=2437\nkey_mgmt=WPA2-PSK\nip_address=" + f.ip + "\n")
 			} else {
 				reply("wpa_state=DISCONNECTED\n")
@@ -131,6 +134,12 @@ func (f *fakeSupplicant) serve() {
 			reply("<3>" + f.joinWith)
 			if strings.HasPrefix(f.joinWith, "CTRL-EVENT-CONNECTED") {
 				f.ip = "192.168.1.50"
+				f.mu.Lock()
+				noIP := f.noIP
+				f.mu.Unlock()
+				if noIP {
+					f.ip = "-"
+				}
 			}
 		case cmd == "DETACH":
 		default:
@@ -237,5 +246,30 @@ func TestNetplanRenderAndSave(t *testing.T) {
 	fi, err := os.Stat(filepath.Join(dir, "90-clipsetup-wlan0.yaml"))
 	if err != nil || fi.Mode().Perm() != 0o600 {
 		t.Fatalf("saved file: %v, %v", fi, err)
+	}
+}
+
+// Associated but no DHCP lease within IPTimeout: still connected, and still saved for next boot.
+func TestWPAJoinWithoutAddressIsSaved(t *testing.T) {
+	w, f := newTestWPA(t, "CTRL-EVENT-CONNECTED - Connection to 02:00:00:00:00:01 completed [id=3 id_str=]")
+	f.mu.Lock()
+	f.noIP = true
+	f.mu.Unlock()
+	w.AllowJoin, w.IPTimeout = true, 600*time.Millisecond
+	saved := false
+	w.Persist = func(Credentials) error { saved = true; return nil }
+	st, err := w.Join(context.Background(), Credentials{SSID: "bench", Passphrase: "correct horse"})
+	if err != nil || st.State != Connected || st.IP4 != "" || !saved {
+		t.Fatalf("status %+v, %v, saved %v", st, err, saved)
+	}
+}
+
+// A TEMP-DISABLED event about another network must not read as a wrong password.
+func TestWPAIgnoresOtherNetworksEvents(t *testing.T) {
+	w, _ := newTestWPA(t, "CTRL-EVENT-SSID-TEMP-DISABLED id=0 ssid=\"old\" auth_failures=1 duration=10 reason=WRONG_KEY")
+	w.AllowJoin, w.JoinTimeout = true, 500*time.Millisecond
+	st, err := w.Join(context.Background(), Credentials{SSID: "bench", Passphrase: "correct horse"})
+	if err != nil || st.State != ConnectionFailed || st.FailReason != NetworkNotFound {
+		t.Fatalf("status %+v, %v", st, err)
 	}
 }

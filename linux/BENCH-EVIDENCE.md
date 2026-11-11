@@ -1,6 +1,6 @@
 # Bench evidence: Bluetooth LE setup on the Orange Pi Zero 2W (lane B0)
 
-Board `mybo-zero` (`ssh narduk@mybo-zero.local`), a bench box, not a boat. Read on 2026-11-10
+Board `mybo-zero` on the office bench, a bench box, not a boat. Read on 2026-11-10
 between 17:20 and 17:30 CT (23:20–23:30 UTC). Every command below was read-only, or a throwaway
 under `/tmp/b0` that was time-boxed, stopped by its recorded PID and removed. Nothing was installed,
 no service was enabled and no network setting was changed. `bluetoothctl show` after the run matched
@@ -130,6 +130,14 @@ connected over the air, so long reads and writes through a real ATT link are sti
 - The Wi-Fi driver (`sprdwl_ng`, out of tree) and the Bluetooth half of the same UWE5622 chip share
   one radio. Whether a join over Wi-Fi drops the BLE link at that moment is unknown until a phone
   runs the whole flow.
+
+- **First boot (for E1).** `netplan-wpa-wlan0` exists only because `/etc/netplan` already has a
+  `wlan0` entry on this card. On a box with no Wi-Fi configured there is no wpa_supplicant on
+  `wlan0` and no control socket, so `wifi.WPA` cannot scan or join. The box image must ship a
+  `wlan0` netplan stanza (even with no access point) or the setup service must start
+  wpa_supplicant itself. Not tested here.
+- **Systemd sandboxing (for E1).** `wifi.WPA` binds its client socket in `os.TempDir()`; under
+  `PrivateTmp=yes` wpa_supplicant cannot answer it, so the box service sets `LocalDir`.
 
 ## Still needs a phone, and Logan's hands
 

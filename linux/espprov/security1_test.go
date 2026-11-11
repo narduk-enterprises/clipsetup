@@ -117,23 +117,29 @@ func TestSecurity1RejectsBadInput(t *testing.T) {
 	}
 }
 
-func TestServerSessionResetsAfterHandlerError(t *testing.T) {
+func TestSessionSurvivesHandlerErrors(t *testing.T) {
 	s, _ := newTestServer(t, "pin")
+	if _, err := s.Register("too-big", func(context.Context, string, []byte) ([]byte, error) {
+		return make([]byte, MaxResponse+1), nil
+	}); err != nil {
+		t.Fatal(err)
+	}
 	c := &Client{T: direct(s, "p1")}
 	ctx := context.Background()
 	if _, err := c.Connect(ctx, "pin", rand.Reader); err != nil {
 		t.Fatal(err)
 	}
-	// A result page before any scan is an error; the session must then be dropped.
+	// A result page before any scan is an error, and so is a response over the attribute limit.
+	// Neither encrypts a response, so both keystreams stay in step and the session goes on.
 	page := enc(nil).varint(fScanMsg, scanCmdResult).msg(fScanCmdResult, enc(nil).varint(2, 4))
 	if _, err := c.Send(ctx, EndpointScan, page); err == nil {
 		t.Fatal("empty scan page answered")
 	}
-	if _, err := c.Send(ctx, EndpointConfig, nil); !errors.Is(err, ErrSessionNotEstablished) {
-		t.Fatalf("after a handler error: %v, want ErrSessionNotEstablished", err)
+	if _, err := c.Send(ctx, "too-big", []byte("x")); err == nil {
+		t.Fatal("oversized response sent")
 	}
-	if _, err := c.Connect(ctx, "pin", rand.Reader); err != nil {
-		t.Fatalf("reconnect: %v", err)
+	if nets, err := c.ScanWiFi(ctx); err != nil || len(nets) != len(goldenNetworks()) {
+		t.Fatalf("after handler errors: %d networks, %v", len(nets), err)
 	}
 }
 

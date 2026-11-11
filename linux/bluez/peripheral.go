@@ -14,6 +14,8 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/prop"
@@ -33,6 +35,9 @@ const (
 	ifaceProps      = "org.freedesktop.DBus.Properties"
 	userDescription = "00002901-0000-1000-8000-00805f9b34fb"
 )
+
+// RequestTimeout bounds the handling of one request.
+const RequestTimeout = 20 * time.Second
 
 // Endpoint is one characteristic: the protocol endpoint name (the 0x2901 value) and its UUID.
 type Endpoint struct {
@@ -69,6 +74,7 @@ type Peripheral struct {
 	chars   []*gattChar
 	ctx     context.Context
 	cancel  context.CancelFunc
+	mu      sync.Mutex // guards advOn, which bluetoothd's Release also clears
 	advOn   bool
 	appOn   bool
 }
@@ -135,7 +141,9 @@ func Start(cfg Config) (*Peripheral, error) {
 		p.Close()
 		return nil, fmt.Errorf("bluez: RegisterAdvertisement: %w", err)
 	}
+	p.mu.Lock()
 	p.advOn = true
+	p.mu.Unlock()
 	p.logf("advertising %s with service %s on %s", cfg.Name, cfg.ServiceUUID, cfg.Adapter)
 	return p, nil
 }
@@ -153,19 +161,19 @@ func (p *Peripheral) AppPath() string { return string(p.appPath) }
 
 // StopAdvertising withdraws the advertisement and keeps the GATT service for a connected central.
 func (p *Peripheral) StopAdvertising() error {
-	if !p.advOn {
+	p.mu.Lock()
+	on := p.advOn
+	p.advOn = false
+	p.mu.Unlock()
+	if !on {
 		return nil
 	}
-	p.advOn = false
 	return p.conn.Object(bluezBus, p.adapter).Call(ifaceAdvMgr+".UnregisterAdvertisement", 0, p.advPath).Err
 }
 
 // Close unregisters everything and closes the bus connection.
 func (p *Peripheral) Close() error {
-	var errs []error
-	if p.advOn {
-		errs = append(errs, p.StopAdvertising())
-	}
+	errs := []error{p.StopAdvertising()}
 	if p.appOn {
 		p.appOn = false
 		errs = append(errs, p.conn.Object(bluezBus, p.adapter).Call(ifaceGattMgr+".UnregisterApplication", 0, p.appPath).Err)
@@ -300,7 +308,9 @@ type advertisement struct{ p *Peripheral }
 
 // Release is called by bluetoothd when it drops the advertisement.
 func (a *advertisement) Release() *dbus.Error {
+	a.p.mu.Lock()
 	a.p.advOn = false
+	a.p.mu.Unlock()
 	a.p.logf("advertisement released by bluetoothd")
 	return nil
 }
@@ -335,7 +345,10 @@ func (c *gattChar) WriteValue(value []byte, opts map[string]dbus.Variant) *dbus.
 func (c *gattChar) ReadValue(opts map[string]dbus.Variant) ([]byte, *dbus.Error) {
 	peer := optPeer(opts)
 	out, err := c.ex.read(peer, optOffset(opts), func(req []byte) ([]byte, error) {
-		return c.p.cfg.Handle(c.p.ctx, peer, c.name, req)
+		// Inside bluetoothd's D-Bus call timeout (25 s) and the ATT transaction timeout (30 s).
+		ctx, cancel := context.WithTimeout(c.p.ctx, RequestTimeout)
+		defer cancel()
+		return c.p.cfg.Handle(ctx, peer, c.name, req)
 	})
 	if err != nil {
 		c.p.logf("%s: %v", c.name, err)

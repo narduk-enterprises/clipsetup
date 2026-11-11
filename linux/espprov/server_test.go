@@ -168,3 +168,17 @@ func TestPeersHaveSeparateSessions(t *testing.T) {
 		t.Fatalf("b after disconnect: %v", err)
 	}
 }
+
+func TestHiddenNetworksAreDropped(t *testing.T) {
+	fake := &wifi.Fake{Networks: []wifi.Network{{SSID: ""}, {SSID: "\x00\x00"}, {SSID: "seen", RSSI: -50}}}
+	s, _ := NewServer(Config{PoP: "pin", WiFi: fake})
+	c := &Client{T: direct(s, "p")}
+	ctx := context.Background()
+	if _, err := c.Connect(ctx, "pin", rand.Reader); err != nil {
+		t.Fatal(err)
+	}
+	nets, err := c.ScanWiFi(ctx)
+	if err != nil || len(nets) != 1 || nets[0].SSID != "seen" {
+		t.Fatalf("scan: %+v, %v", nets, err)
+	}
+}

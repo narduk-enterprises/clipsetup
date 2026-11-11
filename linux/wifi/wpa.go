@@ -34,7 +34,9 @@ type WPA struct {
 	ScanTimeout time.Duration // default 15 s
 	JoinTimeout time.Duration // association, default 30 s
 	IPTimeout   time.Duration // DHCP after association, default 20 s
-	LocalDir    string        // where the client socket is bound; default os.TempDir()
+	// LocalDir is where the client socket is bound; default os.TempDir(). Under systemd with
+	// PrivateTmp=yes, wpa_supplicant cannot reach a socket in /tmp, so set it (e.g. /run/clipsetup).
+	LocalDir string
 }
 
 var localSeq atomic.Uint64
@@ -151,13 +153,15 @@ func (w *WPA) Join(ctx context.Context, cr Credentials) (Status, error) {
 			return Status{}, err
 		}
 	}
-	if cr.Passphrase != "" {
+	if cr.Passphrase != "" && len(cr.Passphrase) != 64 {
 		// Allow WPA3-SAE where the driver and the network have it; older builds refuse SAE, and
-		// then the default WPA-PSK stays.
+		// then the default WPA-PSK stays. SAE needs a passphrase, so not for a raw 64-hex PSK.
 		if set("key_mgmt", "WPA-PSK SAE") == nil {
 			_ = set("ieee80211w", "1")
 		}
 	}
+	// Only events after SELECT_NETWORK decide the outcome.
+	c.events = c.events[:0]
 	if err := c.expectOK(ctx, fmt.Sprintf("SELECT_NETWORK %d", id)); err != nil {
 		undo()
 		return Status{}, err
@@ -166,7 +170,7 @@ func (w *WPA) Join(ctx context.Context, cr Credentials) (Status, error) {
 	jctx, cancel := context.WithTimeout(ctx, orDefault(w.JoinTimeout, 30*time.Second))
 	ev, err := c.waitEvent(jctx, func(ev string) bool {
 		return strings.HasPrefix(ev, "CTRL-EVENT-CONNECTED") ||
-			strings.HasPrefix(ev, "CTRL-EVENT-SSID-TEMP-DISABLED") ||
+			(strings.HasPrefix(ev, "CTRL-EVENT-SSID-TEMP-DISABLED") && strings.Contains(ev, fmt.Sprintf(" id=%d ", id))) ||
 			strings.HasPrefix(ev, "CTRL-EVENT-NETWORK-NOT-FOUND") ||
 			strings.HasPrefix(ev, "WPA: 4-Way Handshake failed")
 	})
@@ -190,7 +194,10 @@ func (w *WPA) Join(ctx context.Context, cr Credentials) (Status, error) {
 	deadline := time.Now().Add(orDefault(w.IPTimeout, 20*time.Second))
 	for {
 		st, err := c.status(ctx)
-		if err == nil && st.State == Connected && st.IP4 != "" {
+		timedOut := time.Now().After(deadline)
+		if err == nil && st.State == Connected && (st.IP4 != "" || timedOut) {
+			// Connected, with an address or (after IPTimeout) still without one: the credentials
+			// are proven by the association either way, so save them for the next boot.
 			if w.Persist != nil {
 				if perr := w.Persist(cr); perr != nil {
 					return st, fmt.Errorf("wifi: joined but not saved for the next boot: %w", perr)
@@ -198,10 +205,11 @@ func (w *WPA) Join(ctx context.Context, cr Credentials) (Status, error) {
 			}
 			return st, nil
 		}
-		if time.Now().After(deadline) {
-			// Associated without an address. Report it as connected-without-IP rather than a
-			// failure: the phone's credentials were right.
-			st.State = Connected
+		if timedOut {
+			// Associated, then dropped before getting an address.
+			if err != nil {
+				return Status{}, err
+			}
 			return st, nil
 		}
 		select {

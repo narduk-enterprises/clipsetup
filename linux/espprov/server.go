@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,6 +31,10 @@ const (
 	EndpointProtoVer = "proto-ver"
 
 	firstCustomID = 0xFF54
+
+	// MaxResponse is the most a response may carry: 512 bytes is the ATT limit for one attribute
+	// value, however many reads it takes.
+	MaxResponse = 512
 )
 
 // Endpoint is a name and the 16-bit id its characteristic UUID is derived from.
@@ -40,6 +45,9 @@ type Endpoint struct {
 
 // Handler serves a custom endpoint. It gets the decrypted request and returns the plaintext
 // response; the server encrypts it. peer identifies the connection (a BlueZ device path).
+// Returning an error fails the phone's read (an ATT error); put business outcomes such as "token
+// refused" in the response instead. Finish well inside ctx's deadline and keep the response within
+// MaxResponse bytes.
 type Handler func(ctx context.Context, peer string, req []byte) ([]byte, error)
 
 // Config configures a Server.
@@ -219,11 +227,13 @@ func (s *Server) Handle(ctx context.Context, peer, endpoint string, req []byte) 
 		return nil, err
 	}
 	resp, err := h(ctx, p, peer, plain)
+	if err == nil && len(resp) > MaxResponse {
+		err = fmt.Errorf("espprov: %s response is %d bytes, over the %d an attribute can carry", endpoint, len(resp), MaxResponse)
+	}
 	if err != nil {
-		// The client's keystream has moved past this request but not past a response; the session
-		// cannot continue, so make the client start a new one.
-		p.sec = NewSecurity1([]byte(s.cfg.PoP), s.cfg.Rand)
-		s.logf("%s %s: %v (session reset)", endpoint, peer, err)
+		// Nothing was encrypted for the response, and the client decrypts nothing when its read
+		// fails, so both keystreams are still in step and the session continues.
+		s.logf("%s %s: %v", endpoint, peer, err)
 		return nil, err
 	}
 	return p.sec.Crypt(resp)
@@ -278,6 +288,7 @@ func (s *Server) handleScan(ctx context.Context, p *peerState, peer string, req 
 			s.logf("scan: %v", err)
 			status, nets = StatusInternalError, nil
 		}
+		nets = withoutHidden(nets)
 		if len(nets) > s.cfg.MaxScanResults {
 			nets = nets[:s.cfg.MaxScanResults]
 		}
@@ -309,6 +320,18 @@ func (s *Server) handleScan(ctx context.Context, p *peerState, peer string, req 
 	default:
 		return nil, fmt.Errorf("espprov: unknown prov-scan message %d", m.uint(fScanMsg))
 	}
+}
+
+// withoutHidden drops networks without a name (hidden SSIDs, sent empty or as NUL bytes): the phone
+// cannot offer them, and they would take slots under MaxScanResults.
+func withoutHidden(nets []wifi.Network) []wifi.Network {
+	out := nets[:0:0]
+	for _, n := range nets {
+		if strings.Trim(n.SSID, "\x00") != "" {
+			out = append(out, n)
+		}
+	}
+	return out
 }
 
 // wifi_config.proto
@@ -397,10 +420,14 @@ func (s *Server) apply(peer string) (Status, chan struct{}) {
 		st, err := s.cfg.WiFi.Join(jctx, c)
 		cancel()
 		if err != nil {
-			// The protocol has no reason for "the device could not try"; Disconnected makes
-			// ESPProvision report a failed join rather than a wrong password.
 			s.logf("join: %v", err)
-			st = wifi.Status{State: wifi.Disconnected}
+			// A backend may join and still report an error (for example, not saved for the next
+			// boot); the phone is told the truth about the link. Otherwise the protocol has no
+			// reason for "the device could not try", and Disconnected makes ESPProvision report a
+			// failed join rather than a wrong password.
+			if st.State != wifi.Connected {
+				st = wifi.Status{State: wifi.Disconnected}
+			}
 		}
 		s.jmu.Lock()
 		s.joining, s.last = false, st
